@@ -1,173 +1,158 @@
 import streamlit as st
 import pandas as pd
-import os
+import statsmodels.formula.api as smf
+import matplotlib.pyplot as plt
+import seaborn as sns
+from geopy.geocoders import Nominatim
+from geopy.extra.rate_limiter import RateLimiter
+import us
 
-def detect_cum_column(df, target_year=None):
-    """
-    Detects and returns the cumulative column for Coccidioidomycosis.
-    If a target_year is provided, it first checks for an exact match with the format:
-       "Coccidioidomycosis, Cum {target_year}"
-    If not found, it falls back to any column containing "cum" in its name.
-    """
-    if target_year is not None:
-        # Create the expected header string.
-        expected = f"Coccidioidomycosis, Cum {target_year}"
-        for col in df.columns:
-            if col.strip().lower() == expected.strip().lower():
-                return col
-    # Fallback: return any column containing 'cum'
-    cum_cols = [col for col in df.columns if 'cum' in col.lower()]
-    if not cum_cols:
-        return None
-    return cum_cols[0]
+st.title("Climate & Coccidioidomycosis Regression Analysis with Station Mapping")
 
-def clean_and_aggregate_data(file_path, state_col="Reporting Area", year_col="MMWR Year", target_year=None):
-    """
-    Reads a CSV file, strips whitespace from headers, detects the appropriate cumulative column,
-    and aggregates data so that for each state and year the last (accumulated) value is used.
-    """
+st.markdown("""
+This app:
+- Reads NOAA’s station inventory (ghcnd-stations.txt) and converts station IDs to locations (states).
+- Loads climate and coccidioidomycosis case data (Climate data.csv) and merges it with station info.
+- Runs regression analyses (simple & multiple) using ASIR as the dependent variable and climate parameters (TAVG, Humidity, PRCP) as predictors.
+""")
+
+###############################
+# 1. Process NOAA Station Data
+###############################
+
+st.header("NOAA Station Inventory Conversion")
+
+# Define fixed-width file column specifications for ghcnd-stations.txt.
+colspecs = [(0,11), (12,20), (21,30), (31,37), (38,68), (69,71), (72,75), (76,79), (80,85)]
+columns = ["ID", "Latitude", "Longitude", "Elevation", "Station_Name", "State", "GSN_Flag", "HCN_Flag", "WMO_ID"]
+
+@st.cache_data(show_spinner=False)
+def load_station_inventory(file_path="ghcnd-stations.txt"):
+    df_stations = pd.read_fwf(file_path, colspecs=colspecs, header=None, names=columns)
+    # Strip whitespace from text columns.
+    df_stations["ID"] = df_stations["ID"].str.strip()
+    df_stations["Station_Name"] = df_stations["Station_Name"].str.strip()
+    df_stations["State"] = df_stations["State"].str.strip()
+    # Convert numeric columns.
+    df_stations["Latitude"] = pd.to_numeric(df_stations["Latitude"], errors="coerce")
+    df_stations["Longitude"] = pd.to_numeric(df_stations["Longitude"], errors="coerce")
+    df_stations["Elevation"] = pd.to_numeric(df_stations["Elevation"], errors="coerce")
+    return df_stations
+
+df_stations = load_station_inventory()
+
+# Set up geolocator for reverse geocoding (for missing state info).
+geolocator = Nominatim(user_agent="ghcnd_station_geocoder")
+geocode = RateLimiter(geolocator.reverse, min_delay_seconds=1)
+
+def get_state_from_coords(row):
+    # Only attempt reverse geocoding if state field is missing.
+    if row["State"]:
+        return row["State"]
+    try:
+        location = geocode((row["Latitude"], row["Longitude"]))
+        if location:
+            address = location.raw.get("address", {})
+            return address.get("state", "")
+    except Exception:
+        return ""
+    return ""
+
+# For U.S. stations missing a state code, try to fill it via reverse geocoding.
+mask_missing_state = df_stations["State"] == ""
+if mask_missing_state.any():
+    st.write("Reverse geocoding missing U.S. state codes (this may take a while)...")
+    df_stations.loc[mask_missing_state, "State"] = df_stations[mask_missing_state].apply(get_state_from_coords, axis=1)
+
+# Convert U.S. state abbreviations to full names using the us library.
+def state_abbr_to_full(state_value):
+    st_obj = us.states.lookup(state_value)
+    return st_obj.name if st_obj else state_value
+
+df_stations["State_Full"] = df_stations["State"].apply(state_abbr_to_full)
+
+st.dataframe(df_stations.head(10))
+
+##########################################
+# 2. Load Climate and Coccidioidomycosis Data
+##########################################
+
+st.header("Climate & Coccidioidomycosis Data")
+
+@st.cache_data(show_spinner=False)
+def load_climate_data(file_path="Climate data.csv"):
     df = pd.read_csv(file_path)
-    # Remove extra whitespace from column names.
     df.columns = df.columns.str.strip()
-    
-    # Detect the cumulative column, preferring one that exactly matches the expected format.
-    cum_col = detect_cum_column(df, target_year)
-    if cum_col is None:
-        raise ValueError(f"No cumulative column found in {file_path}.")
-    
-    # Keep only the necessary columns and rename the cumulative column to "Value".
-    df = df[[state_col, year_col, cum_col]].copy()
-    df.rename(columns={cum_col: "Value"}, inplace=True)
-    
-    # Ensure the year column is numeric.
-    df[year_col] = pd.to_numeric(df[year_col], errors='coerce')
-    
-    # For duplicate state entries, take the last one (assumed to be the final cumulative count).
-    aggregated_df = df.groupby([state_col, year_col], as_index=False).last()
-    return aggregated_df
-
-def process_year_data(year, file_paths, state_col="Reporting Area", year_col="MMWR Year"):
-    """
-    Processes a single year's dataset(s). For years with multiple files (like 2019),
-    the datasets are merged state-wise.
-    """
-    dfs = []
-    for path in file_paths:
-        if os.path.exists(path):
-            st.write(f"Processing {path} for year {year}...")
-            try:
-                # Use the target_year to select the correct "cum" column.
-                df = clean_and_aggregate_data(path, state_col, year_col, target_year=year)
-                dfs.append(df)
-            except Exception as e:
-                st.error(f"Error processing {path}: {e}")
-        else:
-            st.write(f"File {path} not found for year {year}.")
-    
-    if not dfs:
-        return None
-    elif len(dfs) == 1:
-        return dfs[0]
-    else:
-        # Merge multiple datasets (e.g., two files for 2019) on state and year.
-        merged = pd.merge(dfs[0], dfs[1], on=[state_col, year_col], how='outer', suffixes=('_1', '_2'))
-        
-        def choose_value(row, threshold=0.1):
-            v1 = row.get('Value_1')
-            v2 = row.get('Value_2')
-            if pd.isnull(v1) and not pd.isnull(v2):
-                return v2
-            if pd.isnull(v2) and not pd.isnull(v1):
-                return v1
-            if pd.isnull(v1) and pd.isnull(v2):
-                return None
-            # Both values exist: if they are close (within 10%), average them; otherwise, choose the lower.
-            avg = (v1 + v2) / 2
-            rel_diff = abs(v1 - v2) / avg if avg != 0 else 0
-            if rel_diff < threshold:
-                return avg
-            else:
-                return min(v1, v2)
-        
-        merged['Value'] = merged.apply(choose_value, axis=1)
-        return merged[[state_col, year_col, 'Value']]
-
-def compile_data(year_start=2014, year_end=2022, file_prefix='dataset_', file_suffix='.csv', state_col="Reporting Area", year_col="MMWR Year"):
-    """
-    Loops over the years and processes each year’s dataset(s). For example, for 2019,
-    it expects two files (e.g., dataset_2019a.csv and dataset_2019b.csv) and merges them.
-    """
-    compiled_data = pd.DataFrame()
-    for year in range(year_start, year_end + 1):
-        if year == 2019:
-            file_paths = [f"{file_prefix}{year}a{file_suffix}", f"{file_prefix}{year}b{file_suffix}"]
-        else:
-            file_paths = [f"{file_prefix}{year}{file_suffix}"]
-        
-        year_data = process_year_data(year, file_paths, state_col, year_col)
-        if year_data is not None:
-            compiled_data = pd.concat([compiled_data, year_data], ignore_index=True)
-        else:
-            st.write(f"No data found for year {year}.")
-    
-    return compiled_data
-
-def fill_missing_states(df, region_to_states, state_col="Reporting Area", year_col="MMWR Year", value_col="Value"):
-    """
-    For each year and each defined region, if some states are missing,
-    compute the missing values by subtracting the sum of available states from the regional total.
-    If multiple states are missing, the difference is evenly distributed.
-    Regional total rows (where the state equals the region name) are removed after filling.
-    """
-    new_rows = []
-    for year in df[year_col].unique():
-        year_df = df[df[year_col] == year]
-        for region, states in region_to_states.items():
-            region_row = year_df[year_df[state_col] == region]
-            if not region_row.empty:
-                region_total = region_row.iloc[0][value_col]
-                present_states = year_df[year_df[state_col].isin(states)]
-                present_state_names = present_states[state_col].tolist()
-                missing_states = [s for s in states if s not in present_state_names]
-                if missing_states:
-                    present_sum = present_states[value_col].sum()
-                    missing_total = region_total - present_sum
-                    missing_value = missing_total / len(missing_states)
-                    for missing_state in missing_states:
-                        new_row = {state_col: missing_state, year_col: year, value_col: missing_value}
-                        new_rows.append(new_row)
-    
-    if new_rows:
-        df = pd.concat([df, pd.DataFrame(new_rows)], ignore_index=True)
-    region_names = list(region_to_states.keys())
-    df = df[~df[state_col].isin(region_names)]
     return df
 
-# --- Streamlit App ---
+try:
+    df_climate = load_climate_data()
+    st.success("Climate data loaded successfully.")
+except Exception as e:
+    st.error(f"Error loading climate data: {e}")
 
-st.title("Compiled, Cleaned, and Filled Data")
+st.subheader("Climate Data Preview")
+st.dataframe(df_climate.head())
 
-# Define your region-to-states mapping (adjust as needed).
-region_to_states = {
-    "S. Atlantic": ["Florida", "Georgia", "South Carolina", "North Carolina", "Virginia"],
-    # Add other regions and their respective states if needed.
-}
-
-# Step 1: Compile data from 2014 to 2022.
-data = compile_data(2014, 2022)
-
-if data.empty:
-    st.error("No data loaded. Please ensure your CSV files are in the correct location and named appropriately.")
+# We assume the climate data has a "STATION" column that corresponds to NOAA station IDs.
+if "STATION" not in df_climate.columns:
+    st.error("The climate data must contain a 'STATION' column.")
 else:
-    # Step 2: Fill missing state data using regional totals.
-    data_filled = fill_missing_states(data, region_to_states)
-    data_filled = data_filled.sort_values(by=[ "MMWR Year", "Reporting Area"]).reset_index(drop=True)
-    
-    # --- Output ---
-    st.subheader("Final Compiled Data (Table)")
-    st.dataframe(data_filled)
-    
-    st.subheader("Cumulative Cases Trend (Graph)")
-    selected_state = st.selectbox("Select a state to view its trend:", data_filled["Reporting Area"].unique())
-    state_data = data_filled[data_filled["Reporting Area"] == selected_state].set_index("MMWR Year")
-    st.line_chart(state_data[["Value"]])
+    # Merge station inventory into climate data.
+    df_merged = pd.merge(df_climate, df_stations[["ID", "State_Full"]], left_on="STATION", right_on="ID", how="left")
+    st.subheader("Merged Data Preview (Climate + Station Info)")
+    st.dataframe(df_merged.head())
+
+##########################################
+# 3. Regression Analysis
+##########################################
+
+st.header("Regression Analysis")
+
+# For regression, we require the following columns:
+# - ASIR: dependent variable (cases incidence)
+# - TAVG: average annual temperature (°F)
+# - Humidity: (assumed to be in the data)
+# - PRCP: total annual precipitation (inches)
+required_cols = ["ASIR", "TAVG", "Humidity", "PRCP"]
+
+missing = [col for col in required_cols if col not in df_merged.columns]
+if missing:
+    st.error(f"Missing required columns for regression: {missing}. Please check your Climate data CSV.")
+else:
+    st.success("All required regression columns found.")
+
+    # ---- Simple Linear Regression for Temperature (TAVG) ----
+    model_temp = smf.ols("ASIR ~ TAVG", data=df_merged).fit()
+    st.subheader("Simple Linear Regression: ASIR ~ TAVG")
+    st.text(model_temp.summary())
+
+    fig_temp, ax_temp = plt.subplots(figsize=(8, 6))
+    sns.regplot(x="TAVG", y="ASIR", data=df_merged, ax=ax_temp)
+    ax_temp.set_title("ASIR vs Average Temperature (°F)")
+    st.pyplot(fig_temp)
+
+    # ---- Simple Linear Regression for Humidity ----
+    model_hum = smf.ols("ASIR ~ Humidity", data=df_merged).fit()
+    st.subheader("Simple Linear Regression: ASIR ~ Humidity")
+    st.text(model_hum.summary())
+
+    fig_hum, ax_hum = plt.subplots(figsize=(8, 6))
+    sns.regplot(x="Humidity", y="ASIR", data=df_merged, ax=ax_hum)
+    ax_hum.set_title("ASIR vs Humidity")
+    st.pyplot(fig_hum)
+
+    # ---- Multiple Linear Regression ----
+    formula = "ASIR ~ TAVG + Humidity + PRCP"
+    model_multi = smf.ols(formula, data=df_merged).fit()
+    st.subheader("Multiple Linear Regression")
+    st.write("Formula used:", formula)
+    st.text(model_multi.summary())
+
+    # ---- Separate Scatter Plots for Each Predictor ----
+    st.subheader("Scatter Plots for Climate Parameters")
+    for var in ["TAVG", "Humidity", "PRCP"]:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        sns.regplot(x=var, y="ASIR", data=df_merged, ax=ax)
+        ax.set_title(f"ASIR vs {var}")
+        st.pyplot(fig)
