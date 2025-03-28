@@ -65,6 +65,9 @@ if mask_missing_state.any():
     df_stations.loc[mask_missing_state, "State"] = df_stations[mask_missing_state].apply(get_state_from_coords, axis=1)
 
 def state_abbr_to_full(state_value):
+    # Check if the value is a non-empty string.
+    if not isinstance(state_value, str) or not state_value.strip():
+        return ""
     st_obj = us.states.lookup(state_value)
     return st_obj.name if st_obj else state_value
 
