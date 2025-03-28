@@ -85,9 +85,17 @@ st.header("Climate & Coccidioidomycosis Data")
 @st.cache_data(show_spinner=False)
 def load_climate_data(file_path="Climate data.csv"):
     df = pd.read_csv(file_path)
-    df.columns = df.columns.str.strip()
+    df.columns = df.columns.str.strip()  # Remove extra whitespace from headers
+    
+    # Rename columns to match what your Streamlit app expects
+    df.rename(columns={
+        "MMWR_Year": "MMWR Year",
+        "AsIr": "ASIR",
+        # etc. for any other mismatches
+    }, inplace=True)
+    
     return df
-
+    
 try:
     df_climate = load_climate_data()
     st.success("Climate data loaded successfully.")
