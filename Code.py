@@ -25,5 +25,5 @@ def load_station_inventory(file_path="ghcnd-stations.txt"):
     return df_as_string
 
 # Example usage
-station_data_str = load_station_inventory("/mnt/data/ghcnd-stations.txt")
+station_data_str = load_station_inventory("ghcnd-stations.txt")
 print(station_data_str)
