@@ -43,9 +43,13 @@ df_disease = load_disease_data()
 # Merge the climate data with the station inventory (using the STATION ID to map to State_Full)
 df_merged = pd.merge(df_disease, df_stations[["ID", "State_Full"]], left_on="STATION", right_on="ID", how="left")
 
-# Display merged dataset
+# Check the columns in df_merged
+st.write("Columns in df_merged:", df_merged.columns.tolist())
+
+# Now try to display the dataframe
 st.subheader("Merged Dataset: Coccidioidomycosis & Climate Data")
 st.dataframe(df_merged[["STATION", "MMWR Year", "ASIR", "State_Full", "TAVG", "Humidity", "PRCP"]].dropna().reset_index(drop=True))
+
 
 # Regression analysis
 st.header("Regression Analysis: Climate Parameters vs. ASIR")
