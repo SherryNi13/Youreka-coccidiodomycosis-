@@ -38,7 +38,7 @@ This table shows the **station ID** and the corresponding **state abbreviation**
 """)
 
 # Example usage
-file_path = "/mnt/data/ghcnd-stations.txt"
+file_path = "ghcnd-stations.txt"
 df_stations = load_station_inventory(file_path)
 
 if df_stations is not None:
