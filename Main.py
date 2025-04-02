@@ -12,16 +12,17 @@ st.title("Coccidioidomycosis & Climate Analysis with Station Mapping")
 # Load NOAA Station Data (converted to state names)
 @st.cache_data
 def load_station_inventory(file_path="ghcnd-stations.txt"):
-    colspecs = [(0, 11), (12, 20), (21, 30), (31, 37), (38, 68), (69, 71), (72, 75), (76, 79), (80, 85)]
-    columns = ["ID", "Latitude", "Longitude", "Elevation", "Station_Name", "State", "GSN_Flag", "HCN_Flag", "WMO_ID"]
+    colspecs = [(0, 11), (38, 68)]  # Only read 'ID' and 'Station_Name'
+    columns = ["ID", "Station_Name"]
     df_stations = pd.read_fwf(file_path, colspecs=colspecs, header=None, names=columns)
-    df_stations["State"] = df_stations["State"].str.strip()
-    df_stations["Latitude"] = pd.to_numeric(df_stations["Latitude"], errors="coerce")
-    df_stations["Longitude"] = pd.to_numeric(df_stations["Longitude"], errors="coerce")
-    df_stations["State_Full"] = df_stations["State"].apply(lambda x: us.states.lookup(x).name if x else "")
+    df_stations["Station_Name"] = df_stations["Station_Name"].str.strip()
+    df_stations["State_Full"] = df_stations["Station_Name"].apply(lambda x: us.states.lookup(x.split()[-1]).name if x.split()[-1] else "")
     return df_stations
 
+# Example usage
 df_stations = load_station_inventory()
+print(df_stations.head())
+'''
 st.write("Station Data Loaded:", df_stations.head())
 
 # Load and Clean Coccidioidomycosis Data
@@ -71,6 +72,7 @@ try:
 except KeyError as e:
     st.error(f"KeyError: {e}. Available columns in df_merged: {df_merged.columns.tolist()}")
 
+'''
 '''
 # Regression analysis
 st.header("Regression Analysis: Climate Parameters vs. ASIR")
