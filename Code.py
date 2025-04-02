@@ -51,3 +51,39 @@ if df_stations is not None:
     st.dataframe(df_stations[["ID", "State_Abbr"]])  # Display only ID and State_Abbr columns
 else:
     st.write("No data to display.")
+
+# Function to load climate data and extract specific columns
+def load_climate_data(file_path="Climate data.csv"):
+    try:
+        # Load the climate data CSV
+        df = pd.read_csv(file_path)
+        
+        # Extract the necessary columns
+        df_climate = df[["STATION", "DATE", "PRCP", "TAVG"]]
+        
+        # Return the filtered dataframe
+        return df_climate
+
+    except Exception as e:
+        st.error(f"Error loading the climate data: {e}")
+        return None
+
+# Streamlit UI elements
+st.title("Climate Data Extraction")
+
+# Display instructions
+st.markdown("""
+This table shows the **station code**, **date**, **precipitation (PRCP)**, and **temperature (TAVG)** extracted from the climate dataset.
+""")
+
+# Example usage
+file_path = "Climate data.csv"  # File path to the uploaded climate data file
+df_climate = load_climate_data(file_path)
+
+if df_climate is not None:
+    # Display the filtered data in Streamlit
+    st.subheader("Filtered Climate Data")
+    st.dataframe(df_climate)  # Display only the required columns
+else:
+    st.write("No data to display.")
+
