@@ -1,29 +1,49 @@
 import pandas as pd
+import us
+import streamlit as st
 
 def load_station_inventory(file_path="ghcnd-stations.txt"):
-    # Read the file with only the necessary columns: 'ID' (station code) and 'State'
-    colspecs = [(0, 11)]  # Only the station code, 11 characters
-    columns = ["ID"]
-    df_stations = pd.read_fwf(file_path, colspecs=colspecs, header=None, names=columns)
-    
-    # Loop through each station code and extract the state abbreviation dynamically
-    state_abbr_list = []
+    try:
+        # Read the fixed-width file with specific column widths for station code and state
+        colspecs = [(0, 11)]  # Station code length (11 characters)
+        columns = ["ID"]
+        df_stations = pd.read_fwf(file_path, colspecs=colspecs, header=None, names=columns)
 
-    for station_code in df_stations["ID"]:
-        # After the station code, find the first two alphabetic characters
-        state_abbr = ''.join([char for char in station_code[2:] if char.isalpha()][:2])  # Take the first two letters
-        
-        # Append the state abbreviation to the list
-        state_abbr_list.append(state_abbr)
+        # Loop through each station code and extract the state abbreviation dynamically
+        state_abbr_list = []
 
-    # Add the state abbreviation list as a new column
-    df_stations["State_Abbr"] = state_abbr_list
+        for station_code in df_stations["ID"]:
+            # After the station code, find the first two alphabetic characters
+            state_abbr = ''.join([char for char in station_code[2:] if char.isalpha()][:2])  # Take the first two letters
+            
+            # Append the state abbreviation to the list
+            state_abbr_list.append(state_abbr)
 
-    # Convert the DataFrame to a string representation, row by row
-    df_as_string = df_stations.to_string(index=False)
+        # Add the state abbreviation list as a new column
+        df_stations["State_Abbr"] = state_abbr_list
 
-    return df_as_string
+        # Return the dataframe so we can display it in Streamlit
+        return df_stations
+
+    except Exception as e:
+        st.error(f"Error loading the station inventory: {e}")
+        return None
+
+# Streamlit UI elements
+st.title("Station Inventory with State Abbreviations")
+
+# Display instructions
+st.markdown("""
+This table shows the **station ID** and the corresponding **state abbreviation** extracted from the station codes.
+""")
 
 # Example usage
-station_data_str = load_station_inventory("ghcnd-stations.txt")
-print(station_data_str)
+file_path = "/mnt/data/ghcnd-stations.txt"
+df_stations = load_station_inventory(file_path)
+
+if df_stations is not None:
+    # Display the table in Streamlit
+    st.subheader("Station Inventory Table")
+    st.dataframe(df_stations[["ID", "State_Abbr"]])  # Display only ID and State_Abbr columns
+else:
+    st.write("No data to display.")
