@@ -44,6 +44,21 @@ st.write("Disease Data Loaded:", df_disease.head())
 
 # Merge the climate data with the station inventory (using the STATION ID to map to State_Full)
 df_merged = pd.merge(df_disease, df_stations[["ID", "State_Full"]], left_on="STATION", right_on="ID", how="left")
+
+# Renaming columns to match the datasets from 2014-2022 and the climate station dataset
+new_column_names = {
+    "STATION": "Station_ID",
+    "DATE": "Date",
+    "HN01": "High_Temperature",
+    "LN01": "Low_Temperature",
+    "PRCP": "Precipitation",
+    "TAVG": "Average_Temperature",
+    "ID": "Identifier",
+    "State_Full": "Full_State_Name"
+}
+
+df_merged.rename(columns=new_column_names, inplace=True)
+
 st.write("Merged DataFrame:", df_merged.head())
 
 # Check the columns in df_merged
@@ -52,7 +67,7 @@ st.write("Columns in df_merged:", df_merged.columns.tolist())
 # Now try to display the dataframe
 st.subheader("Merged Dataset: Coccidioidomycosis & Climate Data")
 try:
-    st.dataframe(df_merged[["STATION", "DATE", "HN01", "LN01", "PRCP", "TAVG", "ID", "State_Full"]].dropna().reset_index(drop=True))
+    st.dataframe(df_merged[["Station_ID", "Date", "High_Temperature", "Low_Temperature", "Precipitation", "Average_Temperature", "Identifier", "Full_State_Name"]].dropna().reset_index(drop=True))
 except KeyError as e:
     st.error(f"KeyError: {e}. Available columns in df_merged: {df_merged.columns.tolist()}")
 
@@ -60,38 +75,38 @@ except KeyError as e:
 st.header("Regression Analysis: Climate Parameters vs. ASIR")
 
 # Ensure necessary columns are present
-required_columns = ["HN01", "LN01", "TAVG", "PRCP"]
+required_columns = ["High_Temperature", "Low_Temperature", "Average_Temperature", "Precipitation"]
 if not all(col in df_merged.columns for col in required_columns):
     st.error(f"Missing columns for regression: {', '.join([col for col in required_columns if col not in df_merged.columns])}")
 else:
-    # Simple Linear Regression: ASIR ~ TAVG
-    model_temp = smf.ols("HN01 ~ TAVG", data=df_merged).fit()
-    st.subheader("Simple Regression: HN01 ~ TAVG")
+    # Simple Linear Regression: High_Temperature ~ Average_Temperature
+    model_temp = smf.ols("High_Temperature ~ Average_Temperature", data=df_merged).fit()
+    st.subheader("Simple Regression: High_Temperature ~ Average_Temperature")
     st.text(model_temp.summary())
     fig_reg_temp, ax_reg_temp = plt.subplots(figsize=(8, 6))
-    sns.regplot(x="TAVG", y="HN01", data=df_merged, ax=ax_reg_temp)
-    ax_reg_temp.set_title("HN01 vs TAVG (°F)")
+    sns.regplot(x="Average_Temperature", y="High_Temperature", data=df_merged, ax=ax_reg_temp)
+    ax_reg_temp.set_title("High_Temperature vs Average_Temperature (°F)")
     st.pyplot(fig_reg_temp)
 
-    # Simple Linear Regression: HN01 ~ PRCP
-    model_hum = smf.ols("HN01 ~ PRCP", data=df_merged).fit()
-    st.subheader("Simple Regression: HN01 ~ PRCP")
+    # Simple Linear Regression: High_Temperature ~ Precipitation
+    model_hum = smf.ols("High_Temperature ~ Precipitation", data=df_merged).fit()
+    st.subheader("Simple Regression: High_Temperature ~ Precipitation")
     st.text(model_hum.summary())
     fig_reg_hum, ax_reg_hum = plt.subplots(figsize=(8, 6))
-    sns.regplot(x="PRCP", y="HN01", data=df_merged, ax=ax_reg_hum)
-    ax_reg_hum.set_title("HN01 vs PRCP")
+    sns.regplot(x="Precipitation", y="High_Temperature", data=df_merged, ax=ax_reg_hum)
+    ax_reg_hum.set_title("High_Temperature vs Precipitation")
     st.pyplot(fig_reg_hum)
 
-    # Multiple Regression: HN01 ~ TAVG + PRCP
-    formula = "HN01 ~ TAVG + PRCP"
+    # Multiple Regression: High_Temperature ~ Average_Temperature + Precipitation
+    formula = "High_Temperature ~ Average_Temperature + Precipitation"
     model_multi = smf.ols(formula, data=df_merged).fit()
     st.subheader("Multiple Regression")
     st.write("Formula used:", formula)
     st.text(model_multi.summary())
     
     st.subheader("Scatter Plots for Predictors")
-    for var in ["TAVG", "PRCP"]:
+    for var in ["Average_Temperature", "Precipitation"]:
         fig, ax = plt.subplots(figsize=(8, 6))
-        sns.regplot(x=var, y="HN01", data=df_merged, ax=ax)
-        ax.set_title(f"HN01 vs {var}")
+        sns.regplot(x=var, y="High_Temperature", data=df_merged, ax=ax)
+        ax.set_title(f"High_Temperature vs {var}")
         st.pyplot(fig)
