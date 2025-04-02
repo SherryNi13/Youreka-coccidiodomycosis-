@@ -22,6 +22,7 @@ def load_station_inventory(file_path="ghcnd-stations.txt"):
 # Example usage
 df_stations = load_station_inventory()
 print(df_stations.head())
+
 '''
 st.write("Station Data Loaded:", df_stations.head())
 
