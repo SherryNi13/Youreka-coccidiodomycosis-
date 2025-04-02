@@ -186,4 +186,4 @@ else:
     for var in ["TAVG", "Humidity", "PRCP"]:
         fig, ax = plt.subplots(figsize=(8, 6))
         sns.regplot(x=var, y="ASIR", data=df_merged, ax=ax)
-        ax.set_title(f"_
+        ax.set_title(f"Coccidioidomycosis in {selected_year}")
