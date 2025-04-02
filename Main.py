@@ -51,7 +51,10 @@ st.write("Columns in df_merged:", df_merged.columns.tolist())
 
 # Now try to display the dataframe
 st.subheader("Merged Dataset: Coccidioidomycosis & Climate Data")
-st.dataframe(df_merged[["STATION", "MMWR Year", "ASIR", "State_Full", "TAVG", "Humidity", "PRCP"]].dropna().reset_index(drop=True))
+try:
+    st.dataframe(df_merged[["STATION", "MMWR Year", "ASIR", "State_Full", "TAVG", "Humidity", "PRCP"]].dropna().reset_index(drop=True))
+except KeyError as e:
+    st.error(f"KeyError: {e}. Available columns in df_merged: {df_merged.columns.tolist()}")
 
 # Regression analysis
 st.header("Regression Analysis: Climate Parameters vs. ASIR")
