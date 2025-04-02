@@ -14,7 +14,7 @@ def load_station_inventory(file_path="ghcnd-stations.txt"):
 
         for station_code in df_stations["ID"]:
             # After the station code, find the first two alphabetic characters
-            state_abbr = ''.join([char for char in station_code[10:] if char.isalpha()][:2])  # Take the first two letters
+            state_abbr = ''.join([char for char in station_code[2:] if char.isalpha()][:2])  # Take the first two letters
             
             # Append the state abbreviation to the list
             state_abbr_list.append(state_abbr)
