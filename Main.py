@@ -22,6 +22,7 @@ def load_station_inventory(file_path="ghcnd-stations.txt"):
     return df_stations
 
 df_stations = load_station_inventory()
+st.write("Station Data Loaded:", df_stations.head())
 
 # Load and Clean Coccidioidomycosis Data
 @st.cache_data
@@ -39,9 +40,11 @@ def load_disease_data(file_path="Climate data.csv"):
     return df
 
 df_disease = load_disease_data()
+st.write("Disease Data Loaded:", df_disease.head())
 
 # Merge the climate data with the station inventory (using the STATION ID to map to State_Full)
 df_merged = pd.merge(df_disease, df_stations[["ID", "State_Full"]], left_on="STATION", right_on="ID", how="left")
+st.write("Merged DataFrame:", df_merged.head())
 
 # Check the columns in df_merged
 st.write("Columns in df_merged:", df_merged.columns.tolist())
@@ -49,7 +52,6 @@ st.write("Columns in df_merged:", df_merged.columns.tolist())
 # Now try to display the dataframe
 st.subheader("Merged Dataset: Coccidioidomycosis & Climate Data")
 st.dataframe(df_merged[["STATION", "MMWR Year", "ASIR", "State_Full", "TAVG", "Humidity", "PRCP"]].dropna().reset_index(drop=True))
-
 
 # Regression analysis
 st.header("Regression Analysis: Climate Parameters vs. ASIR")
