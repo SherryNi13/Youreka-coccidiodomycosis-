@@ -12,8 +12,8 @@ st.title("Coccidioidomycosis & Climate Analysis with Station Mapping")
 # Load NOAA Station Data (converted to state names)
 @st.cache_data
 def load_station_inventory(file_path="ghcnd-stations.txt"):
-    colspecs = [(0, 11), (38, 68)]  # Only read 'ID' and 'Station_Name'
-    columns = ["ID", "Station_Name"]
+    colspecs = [(0, 11), (38, 40)]  # Only read 'ID' and 'State'
+    columns = ["ID", "State"]
     df_stations = pd.read_fwf(file_path, colspecs=colspecs, header=None, names=columns)
     df_stations["Station_Name"] = df_stations["Station_Name"].str.strip()
     df_stations["State_Full"] = df_stations["Station_Name"].apply(lambda x: us.states.lookup(x.split()[-1]).name if x.split()[-1] else "")
