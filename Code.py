@@ -87,3 +87,33 @@ if df_climate is not None:
 else:
     st.write("No data to display.")
 
+# Streamlit UI elements
+st.title("Climate Data with State Abbreviations")
+
+# Display instructions
+st.markdown("""
+This table shows the **station code**, **date**, **precipitation (PRCP)**, and **temperature (TAVG)** extracted from the climate dataset.
+We have replaced the **station code (STATION)** with the **state abbreviation (State_Abbr)**.
+""")
+
+# Load the data
+file_path_stations = "ghcnd-stations.txt"  # File path to the uploaded stations file
+file_path_climate = "Climate data.csv"  # File path to the uploaded climate data file
+
+df_stations = load_station_inventory(file_path_stations)
+df_climate = load_climate_data(file_path_climate)
+
+if df_stations is not None and df_climate is not None:
+    # Merge the climate data with the station data on 'STATION' and 'ID'
+    df_merged = pd.merge(df_climate, df_stations[['ID', 'State_Abbr']], left_on='STATION', right_on='ID', how='left')
+    
+    # Drop the 'ID' column as it is no longer needed
+    df_merged = df_merged.drop(columns=['ID'])
+
+    # Display the new table in Streamlit
+    st.subheader("Climate Data with State Abbreviation")
+    st.dataframe(df_merged[["State_Abbr", "DATE", "PRCP", "TAVG"]])  # Display the updated table with State_Abbr
+
+else:
+    st.write("No data to display.")
+
