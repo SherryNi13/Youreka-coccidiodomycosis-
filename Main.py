@@ -71,6 +71,7 @@ try:
 except KeyError as e:
     st.error(f"KeyError: {e}. Available columns in df_merged: {df_merged.columns.tolist()}")
 
+'''
 # Regression analysis
 st.header("Regression Analysis: Climate Parameters vs. ASIR")
 
@@ -110,3 +111,4 @@ else:
         sns.regplot(x=var, y="High_Temperature", data=df_merged, ax=ax)
         ax.set_title(f"High_Temperature vs {var}")
         st.pyplot(fig)
+'''
