@@ -52,7 +52,7 @@ st.write("Columns in df_merged:", df_merged.columns.tolist())
 # Now try to display the dataframe
 st.subheader("Merged Dataset: Coccidioidomycosis & Climate Data")
 try:
-    st.dataframe(df_merged[["STATION", "MMWR Year", "ASIR", "State_Full", "TAVG", "Humidity", "PRCP"]].dropna().reset_index(drop=True))
+    st.dataframe(df_merged[["STATION", "DATE", "HN01", "LN01", "PRCP", "TAVG", "ID", "State_Full"]].dropna().reset_index(drop=True))
 except KeyError as e:
     st.error(f"KeyError: {e}. Available columns in df_merged: {df_merged.columns.tolist()}")
 
@@ -60,38 +60,38 @@ except KeyError as e:
 st.header("Regression Analysis: Climate Parameters vs. ASIR")
 
 # Ensure necessary columns are present
-required_columns = ["ASIR", "TAVG", "Humidity", "PRCP"]
+required_columns = ["HN01", "LN01", "TAVG", "PRCP"]
 if not all(col in df_merged.columns for col in required_columns):
     st.error(f"Missing columns for regression: {', '.join([col for col in required_columns if col not in df_merged.columns])}")
 else:
     # Simple Linear Regression: ASIR ~ TAVG
-    model_temp = smf.ols("ASIR ~ TAVG", data=df_merged).fit()
-    st.subheader("Simple Regression: ASIR ~ TAVG")
+    model_temp = smf.ols("HN01 ~ TAVG", data=df_merged).fit()
+    st.subheader("Simple Regression: HN01 ~ TAVG")
     st.text(model_temp.summary())
     fig_reg_temp, ax_reg_temp = plt.subplots(figsize=(8, 6))
-    sns.regplot(x="TAVG", y="ASIR", data=df_merged, ax=ax_reg_temp)
-    ax_reg_temp.set_title("ASIR vs TAVG (°F)")
+    sns.regplot(x="TAVG", y="HN01", data=df_merged, ax=ax_reg_temp)
+    ax_reg_temp.set_title("HN01 vs TAVG (°F)")
     st.pyplot(fig_reg_temp)
 
-    # Simple Linear Regression: ASIR ~ Humidity
-    model_hum = smf.ols("ASIR ~ Humidity", data=df_merged).fit()
-    st.subheader("Simple Regression: ASIR ~ Humidity")
+    # Simple Linear Regression: HN01 ~ PRCP
+    model_hum = smf.ols("HN01 ~ PRCP", data=df_merged).fit()
+    st.subheader("Simple Regression: HN01 ~ PRCP")
     st.text(model_hum.summary())
     fig_reg_hum, ax_reg_hum = plt.subplots(figsize=(8, 6))
-    sns.regplot(x="Humidity", y="ASIR", data=df_merged, ax=ax_reg_hum)
-    ax_reg_hum.set_title("ASIR vs Humidity")
+    sns.regplot(x="PRCP", y="HN01", data=df_merged, ax=ax_reg_hum)
+    ax_reg_hum.set_title("HN01 vs PRCP")
     st.pyplot(fig_reg_hum)
 
-    # Multiple Regression: ASIR ~ TAVG + Humidity + PRCP
-    formula = "ASIR ~ TAVG + Humidity + PRCP"
+    # Multiple Regression: HN01 ~ TAVG + PRCP
+    formula = "HN01 ~ TAVG + PRCP"
     model_multi = smf.ols(formula, data=df_merged).fit()
     st.subheader("Multiple Regression")
     st.write("Formula used:", formula)
     st.text(model_multi.summary())
     
     st.subheader("Scatter Plots for Predictors")
-    for var in ["TAVG", "Humidity", "PRCP"]:
+    for var in ["TAVG", "PRCP"]:
         fig, ax = plt.subplots(figsize=(8, 6))
-        sns.regplot(x=var, y="ASIR", data=df_merged, ax=ax)
-        ax.set_title(f"Coccidioidomycosis vs {var}")
+        sns.regplot(x=var, y="HN01", data=df_merged, ax=ax)
+        ax.set_title(f"HN01 vs {var}")
         st.pyplot(fig)
