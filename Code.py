@@ -22,8 +22,8 @@ def load_station_inventory(file_path="ghcnd-stations.txt"):
         # Add the state abbreviation list as a new column
         df_stations["State_Abbr"] = state_abbr_list
 
-        # Filter rows where ID starts with 'USC00'
-        df_stations = df_stations[df_stations["ID"].str.startswith("USC00")]
+        # Filter rows where ID starts with 'US'
+        df_stations = df_stations[df_stations["ID"].str.startswith("US")]
 
         # Return the dataframe so we can display it in Streamlit
         return df_stations
@@ -38,7 +38,7 @@ st.title("Station Inventory with State Abbreviations")
 # Display instructions
 st.markdown("""
 This table shows the **station ID** and the corresponding **state abbreviation** extracted from the station codes. 
-Only stations with an ID starting with "USC00" are included.
+Only stations with an ID starting with "US" are included.
 """)
 
 # Example usage
@@ -47,7 +47,7 @@ df_stations = load_station_inventory(file_path)
 
 if df_stations is not None:
     # Display the table in Streamlit
-    st.subheader("Station Inventory Table (ID starts with 'USC00')")
+    st.subheader("Station Inventory Table (ID starts with 'US')")
     st.dataframe(df_stations[["ID", "State_Abbr"]])  # Display only ID and State_Abbr columns
 else:
     st.write("No data to display.")
