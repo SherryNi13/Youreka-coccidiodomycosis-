@@ -84,6 +84,7 @@ df_stations = load_processed_station_data(file_path_stations)
 df_climate = load_climate_data(file_path_climate)
 
 if df_stations is not None and df_climate is not None:
+
     # Merge the climate data with the station data on 'STATION' and 'ID'
     df_merged = pd.merge(df_climate, df_stations[['ID', 'State_Abbr']], left_on='STATION', right_on='ID', how='left')
     
@@ -92,13 +93,10 @@ if df_stations is not None and df_climate is not None:
 
     # Sort the merged dataframe by state abbreviation
     df_sorted = df_merged.sort_values(by='State_Abbr')
-
-    # Print the sorted DataFrame to verify the sorting
-    print(df_sorted) 
     
     # Display the new table in Streamlit
     st.subheader("Climate Data with State Abbreviation")
-    st.dataframe(df_merged[["State_Abbr", "DATE", "PRCP", "TAVG"]])  # Display the updated table with State_Abbr
+    st.dataframe(df_sorted[["State_Abbr", "DATE", "PRCP", "TAVG"]])  # Display the updated table with sorted data
 
 else:
     st.write("No data to display.")
