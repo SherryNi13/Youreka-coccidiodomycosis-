@@ -92,6 +92,9 @@ if df_stations is not None and df_climate is not None:
 
     # Sort the merged dataframe by state abbreviation
     df_sorted = df_merged.sort_values(by='State_Abbr')
+
+    # Print the sorted DataFrame to verify the sorting
+    print(df_sorted) 
     
     # Display the new table in Streamlit
     st.subheader("Climate Data with State Abbreviation")
