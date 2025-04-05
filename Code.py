@@ -77,7 +77,7 @@ We have replaced the **station code (STATION)** with the **state abbreviation (S
 """)
 
 # Load the data
-file_path_stations = "ghcnd-stations.txt"  # File path to the uploaded stations file
+file_path_stations = "ghcnd-stations-processed.txt"  # File path to the uploaded stations file
 file_path_climate = "Climate data.csv"  # File path to the uploaded climate data file
 
 df_stations = load_station_inventory(file_path_stations)
