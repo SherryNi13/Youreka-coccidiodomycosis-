@@ -22,7 +22,7 @@ This table shows the **station ID** and the corresponding **state abbreviation (
 """)
 
 # Example usage
-file_path = "/mnt/data/ghcnd-stations-processed.txt"  # File path to the uploaded processed file
+file_path = "ghcnd-stations-processed.txt"  # File path to the uploaded processed file
 df_stations = load_processed_station_data(file_path)
 
 if df_stations is not None:
